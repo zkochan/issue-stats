@@ -1,0 +1,9 @@
+{
+  "name": "issue-stats",
+  "private": true,
+  "type": "module",
+  "bin": { "issue-stats": "./issue-stats.mjs" },
+  "dependencies": {
+    "playwright-core": "1.60"
+  }
+}

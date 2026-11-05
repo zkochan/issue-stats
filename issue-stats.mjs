@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 // Renders a Twitter-sized PNG of new issues opened in pnpm/pnpm, per day or per week.
-// Usage: node issue-stats.mjs [--mode weekly|daily] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--repo owner/name] [--out file.png]
+// Usage: node issue-stats.mjs [--mode weekly|daily] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--repo owner/name] [--out file.png] [--text]
+// --text prints the numbers to the console only, without rendering a PNG (no Chromium needed).
 // --until is exclusive and defaults to today (UTC), so the current day is never counted as a full day.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
-import { chromium } from 'playwright-core'
 
 const DAY = 86400000
-const args = Object.fromEntries(process.argv.slice(2).map((a, i, all) => a.startsWith('--') ? [a.slice(2), all[i + 1]] : []).filter(Boolean))
+const argv = process.argv.slice(2)
+const args = {}
+argv.forEach((a, i) => {
+  if (!a.startsWith('--')) return
+  const next = argv[i + 1]
+  args[a.slice(2)] = next === undefined || next.startsWith('--') ? true : next
+})
+const textOnly = args.text === true
 const mode = args.mode ?? 'weekly'
 const repo = args.repo ?? 'pnpm/pnpm'
 const since = Date.parse((args.since ?? '2026-09-27') + 'T00:00:00Z')
@@ -41,6 +48,15 @@ const totalDays = Math.round((until - since) / DAY)
 const max = Math.max(...buckets.map(b => b.n))
 const tickStep = max > 60 ? 25 : max > 30 ? 10 : 5
 const maxY = Math.ceil((max + 1) / tickStep) * tickStep
+
+const print = () => {
+  for (const b of buckets) console.log(`${iso(b.from)}..${iso(b.to - DAY)}  ${String(b.n).padStart(4)}  ${(b.n / b.days).toFixed(1)}/day${b.days < step / DAY ? '  (partial)' : ''}`)
+  console.log(`total ${total} in ${totalDays} days (${(total / totalDays).toFixed(1)}/day)`)
+}
+if (textOnly) {
+  print()
+  process.exit(0)
+}
 
 const W = 1200, H = 675, padL = 64, padR = mode === 'daily' ? 150 : 40, padT = 150, padB = 90
 const plotW = W - padL - padR, plotH = H - padT - padB
@@ -101,6 +117,7 @@ fs.writeFileSync(htmlPath, html)
 
 const shells = fs.readdirSync(path.join(os.homedir(), '.cache/ms-playwright')).filter(d => d.startsWith('chromium_headless_shell-')).sort()
 const executablePath = path.join(os.homedir(), '.cache/ms-playwright', shells.at(-1), 'chrome-headless-shell-linux64/chrome-headless-shell')
+const { chromium } = await import('playwright-core')
 const browser = await chromium.launch({ executablePath })
 const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 2 })
 await page.goto('file://' + htmlPath)
@@ -108,5 +125,5 @@ await page.screenshot({ path: out })
 await browser.close()
 fs.unlinkSync(htmlPath)
 
-for (const b of buckets) console.log(`${iso(b.from)}..${iso(b.to - DAY)}  ${String(b.n).padStart(4)}  ${(b.n / b.days).toFixed(1)}/day${b.days < step / DAY ? '  (partial)' : ''}`)
-console.log(`total ${total} in ${totalDays} days -> ${path.resolve(out)}`)
+print()
+console.log(`-> ${path.resolve(out)}`)

@@ -7,6 +7,7 @@ repo committed to zero open issues (2026-09-27). Needs `gh` logged in and the
 ```bash
 node issue-stats.mjs                 # weekly bars, writes pnpm-new-issues-per-week.png
 node issue-stats.mjs --mode daily    # daily bars with an average line
+node issue-stats.mjs --text          # print the numbers only, no PNG (no Chromium needed)
 ```
 
 Weeks run Saturday to Friday so the first starts on Sep 27. The current week

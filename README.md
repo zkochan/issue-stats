@@ -1,8 +1,14 @@
 # issue-stats
 
 Twitter-sized PNG of new issues opened in pnpm/pnpm, counted from the day the
-repo committed to zero open issues (2026-09-27). Needs `gh` logged in and the
-`playwright-core` install in `~/node_modules` with a cached headless Chromium.
+repo committed to zero open issues (2026-09-27). Needs `gh` logged in. For the
+PNG, install dependencies and download Playwright's headless Chromium (into
+`~/.cache/ms-playwright`) once:
+
+```bash
+pnpm install
+pnpm run setup
+```
 
 ```bash
 node issue-stats.mjs                 # weekly bars, writes pnpm-new-issues-per-week.png

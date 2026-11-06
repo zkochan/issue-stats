@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "bin": { "issue-stats": "./issue-stats.mjs" },
+  "scripts": {
+    "setup": "playwright-core install chromium-headless-shell"
+  },
   "dependencies": {
     "playwright-core": "1.60"
   }

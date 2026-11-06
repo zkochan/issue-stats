@@ -121,9 +121,14 @@ buckets.forEach((b, i) => {
     xaxis += `<text x="${x(i)}" y="${y(0) + 26}" text-anchor="middle" class="tick">${range}</text>`
     xaxis += `<text x="${x(i)}" y="${y(0) + 46}" text-anchor="middle" class="sub2">${(b.n / b.days).toFixed(1)} / day</text>`
   } else {
-    if (b.n >= max * 0.8 || b.n <= 1) labels += `<text x="${x(i)}" y="${top - 8}" text-anchor="middle" class="val">${b.n}</text>`
+    // Label peaks (only the higher of two adjacent ones, so labels don't collide), and in
+    // daily mode also the near-empty days.
+    const peak = b.n >= max * 0.8 && b.n >= (buckets[i - 1]?.n ?? 0) && b.n > (buckets[i + 1]?.n ?? 0)
+    if (peak || (mode === 'daily' && b.n <= 1)) labels += `<text x="${x(i)}" y="${top - 8}" text-anchor="middle" class="val">${b.n}</text>`
     const every = mode === 'daily' ? (buckets.length > 35 ? 7 : 5) : Math.ceil(buckets.length / 10)
-    if (i % every === 0 || i === buckets.length - 1) xaxis += `<text x="${x(i)}" y="${y(0) + 24}" text-anchor="middle" class="tick">${mode === 'monthly' ? fmtMonth(b.from) : fmt(b.from)}</text>`
+    const last = buckets.length - 1
+    // Skip a regular tick too close to the always-shown last one.
+    if ((i % every === 0 && last - i >= every / 2) || i === last) xaxis += `<text x="${x(i)}" y="${y(0) + 24}" text-anchor="middle" class="tick">${mode === 'monthly' ? fmtMonth(b.from) : fmt(b.from)}</text>`
   }
 })
 if (dense) {

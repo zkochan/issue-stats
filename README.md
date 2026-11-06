@@ -17,11 +17,14 @@ node issue-stats.mjs --text          # print the numbers only, no PNG (no Chromi
 node issue-stats.mjs merged-prs                  # merged PRs per week over the last year
 node issue-stats.mjs merged-prs --mode monthly   # same, one bar per calendar month
 node issue-stats.mjs ratio --mode monthly        # merged PRs per new issue, per month
+node issue-stats.mjs pr-types --mode monthly     # merged PRs stacked by fix/feat/perf/other
 ```
 
 `merged-prs` counts pull requests by merge date and defaults `--since` to the
 first of the month a year ago. `ratio` divides merged PRs by new issues in each
-bar, with the same default; its line is the overall ratio. `--mode monthly` works for issues too. Charts
+bar, with the same default; its line is the overall ratio. `pr-types` takes the type from the
+conventional-commit prefix of the PR title (`fix:`, `feat(scope)!:`, ...); any
+other prefix, or none, counts as "other". `--mode monthly` works for issues too. Charts
 with more than 16 bars switch to sparse labels and an average line.
 
 Weeks run Saturday to Friday so the first starts on Sep 27. The current week

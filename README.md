@@ -16,10 +16,12 @@ node issue-stats.mjs --mode daily    # daily bars with an average line
 node issue-stats.mjs --text          # print the numbers only, no PNG (no Chromium needed)
 node issue-stats.mjs merged-prs                  # merged PRs per week over the last year
 node issue-stats.mjs merged-prs --mode monthly   # same, one bar per calendar month
+node issue-stats.mjs ratio --mode monthly        # merged PRs per new issue, per month
 ```
 
 `merged-prs` counts pull requests by merge date and defaults `--since` to the
-first of the month a year ago. `--mode monthly` works for issues too. Charts
+first of the month a year ago. `ratio` divides merged PRs by new issues in each
+bar, with the same default; its line is the overall ratio. `--mode monthly` works for issues too. Charts
 with more than 16 bars switch to sparse labels and an average line.
 
 Weeks run Saturday to Friday so the first starts on Sep 27. The current week

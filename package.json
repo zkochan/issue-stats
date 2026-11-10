@@ -4,7 +4,8 @@
   "type": "module",
   "bin": { "issue-stats": "./issue-stats.mjs" },
   "scripts": {
-    "setup": "playwright-core install chromium-headless-shell"
+    "setup": "playwright-core install chromium-headless-shell",
+    "zero-issue-stats": "node issue-stats.mjs --text"
   },
   "dependencies": {
     "playwright-core": "1.60"

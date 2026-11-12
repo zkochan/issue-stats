@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Renders a Twitter-sized PNG of new issues opened (or pull requests merged, or the ratio
 // of the two) in pnpm/pnpm, per day, week or month.
-// Usage: node issue-stats.mjs [issues|merged-prs|ratio|pr-types] [--mode weekly|daily|monthly] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--repo owner/name] [--out file.png] [--text]
+// Usage: node issue-stats.mjs [issues|merged-prs|ratio|pr-types] [--mode weekly|daily|monthly] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--repo owner/name] [--out file.png] [--text] [--no-cache]
 // The merged-prs command counts PRs by merge date and defaults --since to the start of the month a year ago.
 // The ratio command charts merged PRs per new issue, with the same --since default.
 // The pr-types command stacks merged PRs by conventional-commit title prefix (fix, feat, perf, other).
+// Finished past windows are cached under ~/.cache/issue-stats; --no-cache refetches them.
 // --text prints the numbers to the console only, without rendering a PNG (no Chromium needed).
 // --until is exclusive and defaults to today (UTC), so the current day is never counted as a full day.
 import fs from 'node:fs'
@@ -58,21 +59,39 @@ const searchQuery = `query($q: String!, $endCursor: String) {
     nodes { ... on Issue { createdAt } ... on PullRequest { mergedAt title } }
   }
 }`
+// Windows are aligned to a fixed grid (counted from the Unix epoch) rather than to --since,
+// so the same window is reused whatever range is asked for. A window that ended more than
+// CACHE_MARGIN days ago is cached on disk: past issues and merges don't change (the margin
+// covers search index lag). --no-cache refetches everything.
+const CACHE_MARGIN = 2
+const cacheDir = path.join(process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache'), 'issue-stats', repo.replace('/', '__'))
+const useCache = args['no-cache'] !== true
 // Returns { t, title } per item (title is only fetched for PRs).
 const fetchItems = kind => {
-  const windowDays = kind === 'prs' ? 7 : 28
+  const win = (kind === 'prs' ? 7 : 28) * DAY
   const items = []
-  for (let from = since; from < until; from += windowDays * DAY) {
-    const to = Math.min(from + windowDays * DAY, until)
-    const range = `${iso(from)}..${iso(to - DAY)}`
-    const q = kind === 'prs' ? `repo:${repo} is:pr is:merged merged:${range}` : `repo:${repo} is:issue created:${range}`
-    const outText = execFileSync('gh', ['api', 'graphql', '--paginate', '-f', `query=${searchQuery}`, '-f', `q=${q}`,
-      '--jq', '.data.search | (if .issueCount > 1000 then error("more than 1000 results: \\(.issueCount)") else . end) | .nodes[] | [.mergedAt // .createdAt, .title // ""] | @tsv'], { encoding: 'utf8' })
-    for (const line of outText.split('\n')) {
-      if (!line) continue
-      const [t, title] = line.split('\t')
-      items.push({ t: Date.parse(t), title })
+  for (let from = Math.floor(since / win) * win; from < until; from += win) {
+    const to = from + win
+    const cacheable = to <= today - CACHE_MARGIN * DAY
+    const file = path.join(cacheDir, `${kind}-${iso(from)}-${iso(to - DAY)}.json`)
+    let rows
+    if (cacheable && useCache && fs.existsSync(file)) rows = JSON.parse(fs.readFileSync(file, 'utf8'))
+    else {
+      const range = `${iso(from)}..${iso(to - DAY)}`
+      const q = kind === 'prs' ? `repo:${repo} is:pr is:merged merged:${range}` : `repo:${repo} is:issue created:${range}`
+      const outText = execFileSync('gh', ['api', 'graphql', '--paginate', '-f', `query=${searchQuery}`, '-f', `q=${q}`,
+        '--jq', '.data.search | (if .issueCount > 1000 then error("more than 1000 results: \\(.issueCount)") else . end) | .nodes[] | [.mergedAt // .createdAt, .title // ""] | @tsv'], { encoding: 'utf8' })
+      rows = outText.split('\n').filter(Boolean).map(line => {
+        const [t, title] = line.split('\t')
+        return [Date.parse(t), title]
+      })
+      if (cacheable) {
+        fs.mkdirSync(cacheDir, { recursive: true })
+        fs.writeFileSync(file, JSON.stringify(rows))
+      }
     }
+    // An aligned window can stick out past either end of the requested range.
+    for (const [t, title] of rows) if (t >= since && t < until) items.push({ t, title })
   }
   return items
 }

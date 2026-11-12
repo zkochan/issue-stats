@@ -30,3 +30,9 @@ with more than 16 bars switch to sparse labels and an average line.
 Weeks run Saturday to Friday so the first starts on Sep 27. The current week
 is a lighter bar labeled "so far". `--until` (exclusive) defaults to today, so
 today is never counted.
+
+Results are cached under `~/.cache/issue-stats/<owner>__<repo>/` (or
+`$XDG_CACHE_HOME`): each search window (7 days for PRs, 28 for issues, aligned
+to a fixed grid so different `--since` values share them) is stored once it
+ended more than 2 days ago. Recent windows are always refetched. Pass
+`--no-cache` to refetch everything, or delete the directory.
